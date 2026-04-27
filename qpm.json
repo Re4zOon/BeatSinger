@@ -1,0 +1,79 @@
+{
+  "$schema": "https://raw.githubusercontent.com/QuestPackageManager/QPM.Package/refs/heads/main/qpm.schema.json",
+  "version": "0.4.0",
+  "sharedDir": "shared",
+  "dependenciesDir": "extern",
+  "info": {
+    "name": "BeatSinger",
+    "id": "beatsinger",
+    "version": "2.0.0",
+    "url": null,
+    "additionalData": {
+      "cmake": true
+    }
+  },
+  "workspace": {
+    "scripts": {
+      "build": [
+        "cmake --fresh -G Ninja -B build -S .",
+        "cmake --build build"
+      ],
+      "copy": [
+        "qpm qmod copy"
+      ],
+      "logcat": [
+        "qpm logcat -self"
+      ],
+      "qmod": [
+        "qpm qmod zip"
+      ]
+    },
+    "ndk": "=27.2.12479018",
+    "qmodIncludeDirs": [
+      "build"
+    ],
+    "qmodIncludeFiles": [
+      "mod.template.json"
+    ],
+    "qmodOutput": null
+  },
+  "dependencies": [
+    {
+      "id": "beatsaber-hook",
+      "versionRange": "=6.4.2",
+      "additionalData": {}
+    },
+    {
+      "id": "bs-cordl",
+      "versionRange": "=4008.0.0",
+      "additionalData": {}
+    },
+    {
+      "id": "bsml",
+      "versionRange": "=0.4.55",
+      "additionalData": {
+        "includeQmod": false
+      }
+    },
+    {
+      "id": "custom-types",
+      "versionRange": "=0.18.3",
+      "additionalData": {}
+    },
+    {
+      "id": "paper2_scotland2",
+      "versionRange": "=4.7.0",
+      "additionalData": {
+        "includeQmod": false,
+        "private": true
+      }
+    },
+    {
+      "id": "songcore",
+      "versionRange": "=1.1.26",
+      "additionalData": {
+        "includeQmod": false
+      }
+    }
+  ]
+}
