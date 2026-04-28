@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - master
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  qpm:
+    name: QPM build and package
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up QPM
+        uses: ./.github/actions/setup-qpm
+
+      - name: Validate manifests
+        run: |
+          set -euo pipefail
+          python3 -m json.tool qpm.json >/dev/null
+          python3 -m json.tool mod.template.json >/dev/null
+
+      - name: Resolve Android NDK
+        run: qpm ndk resolve -d
+
+      - name: Restore QPM dependencies
+        run: qpm restore
+
+      - name: Build native mod
+        run: qpm s build
+
+      - name: Package qmod
+        run: qpm s qmod
+
+      - name: Verify qmod output
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          qmods=(*.qmod)
+          if [ "${#qmods[@]}" -ne 1 ]; then
+            printf 'Expected exactly one root qmod, found %s\n' "${#qmods[@]}" >&2
+            printf '%s\n' "${qmods[@]}" >&2
+            exit 1
+          fi
+          printf 'Validated qmod: %s\n' "${qmods[0]}"

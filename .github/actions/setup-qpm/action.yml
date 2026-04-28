@@ -1,0 +1,50 @@
+name: Setup QPM
+description: Install QPM and cache Quest modding dependencies.
+
+inputs:
+  qpm-version:
+    description: QPM release tag to install.
+    required: false
+    default: v1.5.9
+  qpm-sha256:
+    description: SHA-256 checksum for qpm-linux-x64.zip.
+    required: false
+    default: 6cf88062f5999b68cacd012fe9640271b845b5da79f2a9f48e69257f7faae2c8
+
+runs:
+  using: composite
+  steps:
+    - name: Install system packages
+      shell: bash
+      run: |
+        set -euo pipefail
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends curl unzip ninja-build
+
+    - name: Cache QPM packages and NDK
+      uses: actions/cache@v5
+      with:
+        path: |
+          ~/.local/share/QPM-RS/cache
+          ~/.local/share/QPM-RS/ndk
+        key: qpm-${{ runner.os }}-${{ inputs.qpm-version }}-${{ hashFiles('qpm.json') }}
+        restore-keys: |
+          qpm-${{ runner.os }}-${{ inputs.qpm-version }}-
+          qpm-${{ runner.os }}-
+
+    - name: Install QPM
+      shell: bash
+      run: |
+        set -euo pipefail
+        qpm_url="https://github.com/QuestPackageManager/QPM.CLI/releases/download/${{ inputs.qpm-version }}/qpm-linux-x64.zip"
+        curl -fsSL "${qpm_url}" -o qpm-linux-x64.zip
+        echo "${{ inputs.qpm-sha256 }}  qpm-linux-x64.zip" | sha256sum -c -
+        unzip -q qpm-linux-x64.zip -d qpm-linux-x64
+        qpm_path="$(find qpm-linux-x64 -type f -name qpm -print -quit)"
+        if [ -z "${qpm_path}" ]; then
+          echo "qpm binary was not found in qpm-linux-x64.zip" >&2
+          exit 1
+        fi
+        install -m 0755 "${qpm_path}" "${RUNNER_TEMP}/qpm"
+        echo "${RUNNER_TEMP}" >> "${GITHUB_PATH}"
+        "${RUNNER_TEMP}/qpm" --version
