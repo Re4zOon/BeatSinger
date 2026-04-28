@@ -1,0 +1,76 @@
+name: QMOD Artifact
+
+on:
+  pull_request:
+    branches:
+      - master
+    types:
+      - closed
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qmod-artifact-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  qmod-artifact:
+    name: Save merged qmod
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'master'
+
+    steps:
+      - name: Check out merge commit
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+
+      - name: Set up QPM
+        uses: ./.github/actions/setup-qpm
+
+      - name: Validate manifests
+        run: |
+          set -euo pipefail
+          python3 -m json.tool qpm.json >/dev/null
+          python3 -m json.tool mod.template.json >/dev/null
+
+      - name: Resolve Android NDK
+        run: qpm ndk resolve -d
+
+      - name: Restore QPM dependencies
+        run: qpm restore
+
+      - name: Build native mod
+        run: qpm s build
+
+      - name: Package qmod
+        run: qpm s qmod
+
+      - name: Prepare artifact file
+        env:
+          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          qmods=(*.qmod)
+          if [ "${#qmods[@]}" -ne 1 ]; then
+            printf 'Expected exactly one root qmod, found %s\n' "${#qmods[@]}" >&2
+            printf '%s\n' "${qmods[@]}" >&2
+            exit 1
+          fi
+          mkdir -p dist
+          short_sha="${MERGE_SHA:0:12}"
+          artifact="dist/BeatSinger-pr-${{ github.event.pull_request.number }}-${short_sha}.qmod"
+          cp "${qmods[0]}" "${artifact}"
+          printf 'QMOD_PATH=%s\n' "${artifact}" >> "${GITHUB_ENV}"
+          printf 'Prepared qmod artifact: %s\n' "${artifact}"
+
+      - name: Upload qmod artifact
+        uses: actions/upload-artifact@v7
+        with:
+          path: ${{ env.QMOD_PATH }}
+          if-no-files-found: error
+          retention-days: 30
+          archive: false

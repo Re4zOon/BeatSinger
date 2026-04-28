@@ -1,4 +1,6 @@
 .*/
+!.github/
+!.github/**
 bin/
 obj/
 *.db
@@ -11,5 +13,6 @@ qpm_defines.cmake
 qpm.cmake
 qpm_finalize.cmake
 qpm.shared.json
+!qpm.shared.json
 extern.cmake
 ndkpath.txt
